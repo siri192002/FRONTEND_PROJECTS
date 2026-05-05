@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calculator — CodeAlpha Task 2</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0f0f0f;
+            --surface: #1a1a1a;
+            --surface2: #242424;
+            --border: rgba(255, 255, 255, 0.08);
+            --text: #f0f0f0;
+            --muted: #888;
+            --accent: #c8ff00;
+            --accent-dim: rgba(200, 255, 0, 0.12);
+            --op-color: #c8ff00;
+            --fn-color: #888;
+            --radius: 20px;
+            --btn-radius: 14px;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+            font-family: 'DM Sans', sans-serif;
+            background-image: radial-gradient(ellipse at 30% 20%, rgba(200, 255, 0, 0.04) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(200, 255, 0, 0.03) 0%, transparent 60%);
+        }
+
+        .calc-shell {
+            background: var(--surface);
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius);
+            width: 320px;
+            overflow: hidden;
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6), 0 0 0 0.5px rgba(255, 255, 255, 0.05);
+        }
+
+        .display {
+            padding: 28px 24px 20px;
+            background: var(--surface);
+            position: relative;
+        }
+
+        .display::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 24px;
+            right: 24px;
+            height: 0.5px;
+            background: var(--border);
+        }
+
+        .expr {
+            font-family: 'DM Mono', monospace;
+            font-size: 13px;
+            color: var(--muted);
+            min-height: 20px;
+            text-align: right;
+            letter-spacing: 0.02em;
+            margin-bottom: 6px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .result {
+            font-family: 'DM Mono', monospace;
+            font-size: 42px;
+            font-weight: 300;
+            color: var(--text);
+            text-align: right;
+            line-height: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            transition: transform 0.08s ease, opacity 0.08s ease;
+        }
+
+        .result.pop {
+            transform: scale(1.04);
+            opacity: 0.7;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+            background: var(--border);
+            padding: 0;
+        }
+
+        .btn {
+            position: relative;
+            height: 72px;
+            border: none;
+            background: var(--surface2);
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            font-size: 18px;
+            font-weight: 400;
+            cursor: pointer;
+            transition: background 0.1s, color 0.1s, transform 0.08s;
+            outline: none;
+            user-select: none;
+        }
+
+        .btn:hover {
+            background: #2c2c2c;
+        }
+
+        .btn:active {
+            transform: scale(0.94);
+            background: #333;
+        }
+
+        .btn.fn {
+            color: var(--fn-color);
+            font-size: 14px;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 400;
+        }
+
+        .btn.op {
+            color: var(--op-color);
+            font-size: 22px;
+        }
+
+        .btn.op:hover {
+            background: var(--accent-dim);
+        }
+
+        .btn.eq {
+            background: var(--accent);
+            color: #0f0f0f;
+            font-size: 22px;
+            font-weight: 500;
+        }
+
+        .btn.eq:hover {
+            background: #d6ff33;
+        }
+
+        .btn.eq:active {
+            background: #b8e800;
+        }
+
+        .btn.zero {
+            grid-column: span 2;
+            justify-content: flex-start;
+            padding-left: 28px;
+            display: flex;
+            align-items: center;
+        }
+
+        .hint {
+            padding: 10px 24px;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.18);
+            text-align: center;
+            letter-spacing: 0.04em;
+            font-family: 'DM Sans', sans-serif;
+            background: var(--surface);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="calc-shell">
+        <div class="display">
+            <div class="expr" id="expr"></div>
+            <div class="result" id="result">0</div>
+        </div>
+        <div class="btn-grid" id="grid"></div>
+        <div class="hint">keyboard supported &nbsp;· &nbsp;esc to clear</div>
+    </div>
+
+    <script>
+        const buttons = [{
+                label: 'AC',
+                type: 'fn'
+            },
+            {
+                label: '+/−',
+                type: 'fn'
+            },
+            {
+                label: '%',
+                type: 'fn'
+            },
+            {
+                label: '÷',
+                type: 'op'
+            },
+            {
+                label: '7'
+            }, {
+                label: '8'
+            }, {
+                label: '9'
+            },
+            {
+                label: '×',
+                type: 'op'
+            },
+            {
+                label: '4'
+            }, {
+                label: '5'
+            }, {
+                label: '6'
+            },
+            {
+                label: '−',
+                type: 'op'
+            },
+            {
+                label: '1'
+            }, {
+                label: '2'
+            }, {
+                label: '3'
+            },
+            {
+                label: '+',
+                type: 'op'
+            },
+            {
+                label: '0',
+                type: 'zero'
+            },
+            {
+                label: '.'
+            },
+            {
+                label: '=',
+                type: 'eq'
+            }
+        ];
+
+        const resultEl = document.getElementById('result');
+        const exprEl = document.getElementById('expr');
+        const grid = document.getElementById('grid');
+
+        let current = '0';
+        let previous = '';
+        let operator = '';
+        let justEvaled = false;
+
+        function updateDisplay(expr = '') {
+            resultEl.textContent = current.length > 11 ?
+                parseFloat(current).toExponential(4) :
+                current;
+            exprEl.textContent = expr;
+        }
+
+        function popAnim() {
+            resultEl.classList.add('pop');
+            setTimeout(() => resultEl.classList.remove('pop'), 100);
+        }
+
+        function calculate(showExpr = false) {
+            const a = parseFloat(previous);
+            const b = parseFloat(current);
+            let res;
+            switch (operator) {
+                case '÷':
+                    res = b !== 0 ? a / b : 'Error';
+                    break;
+                case '×':
+                    res = a * b;
+                    break;
+                case '−':
+                    res = a - b;
+                    break;
+                case '+':
+                    res = a + b;
+                    break;
+                default:
+                    return;
+            }
+            const expr = showExpr ? `${previous} ${operator} ${current} =` : '';
+            current = res === 'Error' ? 'Error' : String(parseFloat(res.toFixed(10)));
+            if (showExpr) {
+                previous = '';
+                operator = '';
+                justEvaled = true;
+            }
+            popAnim();
+            updateDisplay(expr);
+        }
+
+        function handleInput(label) {
+            if (label === 'AC') {
+                current = '0';
+                previous = '';
+                operator = '';
+                justEvaled = false;
+                updateDisplay();
+                return;
+            }
+            if (label === '+/−') {
+                current = current.startsWith('-') ? current.slice(1) : '-' + current;
+                updateDisplay(exprEl.textContent);
+                return;
+            }
+            if (label === '%') {
+                current = String(parseFloat(current) / 100);
+                updateDisplay(exprEl.textContent);
+                return;
+            }
+            if (['÷', '×', '−', '+'].includes(label)) {
+                if (operator && !justEvaled) calculate();
+                previous = current;
+                operator = label;
+                justEvaled = false;
+                current = '0';
+                updateDisplay(previous + ' ' + label);
+                return;
+            }
+            if (label === '=') {
+                if (!operator) return;
+                calculate(true);
+                return;
+            }
+            if (label === '.') {
+                if (justEvaled) {
+                    current = '0';
+                    justEvaled = false;
+                }
+                if (!current.includes('.')) current += '.';
+                updateDisplay(exprEl.textContent);
+                return;
+            }
+            if (justEvaled) {
+                current = '0';
+                previous = '';
+                operator = '';
+                justEvaled = false;
+            }
+            current = current === '0' ? label : current + label;
+            updateDisplay(exprEl.textContent);
+        }
+
+        buttons.forEach(b => {
+            const btn = document.createElement('button');
+            btn.className = 'btn' + (b.type ? ' ' + b.type : '');
+            btn.textContent = b.label;
+            btn.addEventListener('click', () => handleInput(b.label));
+            grid.appendChild(btn);
+        });
+
+        const keyMap = {
+            '0': '0',
+            '1': '1',
+            '2': '2',
+            '3': '3',
+            '4': '4',
+            '5': '5',
+            '6': '6',
+            '7': '7',
+            '8': '8',
+            '9': '9',
+            '+': '+',
+            '-': '−',
+            '*': '×',
+            '/': '÷',
+            'Enter': '=',
+            '=': '=',
+            '.': '.',
+            'Escape': 'AC',
+            'Backspace': 'AC',
+            '%': '%'
+        };
+        document.addEventListener('keydown', e => {
+            if (keyMap[e.key]) {
+                e.preventDefault();
+                handleInput(keyMap[e.key]);
+            }
+        });
+
+        updateDisplay();
+    </script>
+</body>
+
+</html>
